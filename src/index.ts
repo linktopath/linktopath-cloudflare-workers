@@ -6,7 +6,7 @@ import {
   Shortcut,
 } from "./schema";
 import { dbOperations } from "./db-operations";
-import { InternalServerError, NotFoundError } from "./errors";
+import { ConflictError, InternalServerError, NotFoundError } from "./errors";
 
 const app = new Hono();
 
@@ -17,14 +17,15 @@ app.get("/:slug", async (c) => {
     const response = await dbOperations.queryShortcut(slug);
     return c.json(response as QuerySourceURLResponse);
   } catch (error: unknown) {
-    console.error(error);
+    console.error("GET /:slug failed:", error instanceof Error ? error.message : error, {
+      cause: error,
+    });
     if (error instanceof NotFoundError) {
-      return c.status(404);
+      return c.notFound();
     } else if (error instanceof InternalServerError) {
-      return c.status(500);
+      return c.text("Internal Server Error", 500);
     } else {
-      console.error("An unhandled error has occurred: ", error);
-      return c.status(500);
+      return c.text("Internal Server Error", 500);
     }
   }
 });
@@ -34,7 +35,7 @@ app.put(
   validator("json", (value, c) => {
     const parsed = createShortcutSchema.safeParse(value);
     if (!parsed.success) {
-      return c.status(422);
+      return c.text("Unprocessable Entity", 422);
     }
 
     return parsed.data;
@@ -46,12 +47,15 @@ app.put(
       const response = await dbOperations.createShortcut(validatedBody);
       return c.json(response as Shortcut);
     } catch (error: unknown) {
-      console.error(error);
-      if (error instanceof InternalServerError) {
-        return c.status(500);
+      console.error("PUT /shortcut failed:", error instanceof Error ? error.message : error, {
+        cause: error,
+      });
+      if (error instanceof ConflictError) {
+        return c.text("Conflict", 409);
+      } else if (error instanceof InternalServerError) {
+        return c.text("Internal Server Error", 500);
       } else {
-        console.error("An unhandled error has occurred: ", error);
-        return c.status(500);
+        return c.text("Internal Server Error", 500);
       }
     }
   },

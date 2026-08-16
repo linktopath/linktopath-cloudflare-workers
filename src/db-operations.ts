@@ -3,10 +3,14 @@ import { drizzle } from "drizzle-orm/d1";
 import { shortcutsTable } from "./db/schema";
 import { CreateShortcut, QuerySourceURLResponse, Shortcut } from "./schema";
 import { and, eq, sql } from "drizzle-orm";
-import { InternalServerError, NotFoundError } from "./errors";
+import { ConflictError, InternalServerError, NotFoundError } from "./errors";
 
 const db = env.DB;
 const dbClient = drizzle(db);
+
+const isUniqueViolation = (err: Error): boolean =>
+  err.message.includes("UNIQUE constraint") ||
+  (err.cause instanceof Error && isUniqueViolation(err.cause));
 
 export const dbOperations = {
   createShortcut: async ({
@@ -14,12 +18,18 @@ export const dbOperations = {
     slug,
     expiry_date,
   }: CreateShortcut): Promise<Shortcut> => {
+    // Store dates in SQLite format, which doesn't use T as a date-time separator
+    expiry_date = expiry_date.replace("T", " ");
+
     const response = await dbClient
       .insert(shortcutsTable)
       .values({ source_url, slug, expiry_date })
       .returning()
-      .catch((reason) => {
-        throw new InternalServerError(reason);
+      .catch((reason: unknown) => {
+        const cause = reason instanceof Error ? reason : new Error(String(reason));
+        throw isUniqueViolation(cause)
+          ? new ConflictError(cause.message, { cause })
+          : new InternalServerError(cause.message, { cause });
       });
 
     if (response.length > 1) {
@@ -37,11 +47,14 @@ export const dbOperations = {
       .where(
         and(
           eq(shortcutsTable.slug, slug),
-          sql`current_timestamp < ${shortcutsTable.expiry_date}`,
+          sql`datetime('now') < datetime(${shortcutsTable.expiry_date})`,
         ),
       )
-      .catch((reason) => {
-        throw new InternalServerError(reason);
+      .catch((reason: unknown) => {
+        throw new InternalServerError(
+          reason instanceof Error ? reason.message : String(reason),
+          { cause: reason },
+        );
       });
 
     if (response.length > 1) {

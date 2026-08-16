@@ -10,7 +10,6 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.2",
-    "kysely": "^0.29.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

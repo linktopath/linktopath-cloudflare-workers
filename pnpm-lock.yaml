@@ -17,9 +17,6 @@ importers:
       hono:
         specifier: ^4.13.2
         version: 4.13.2
-      kysely:
-        specifier: ^0.29.5
-        version: 0.29.5
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -1481,7 +1478,8 @@ snapshots:
 
   kleur@4.1.5: {}
 
-  kysely@0.29.5: {}
+  kysely@0.29.5:
+    optional: true
 
   miniflare@5.20260811.1-alpha:
     dependencies:

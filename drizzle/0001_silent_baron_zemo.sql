@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `shortcuts_slug_unique` ON `shortcuts` (`slug`);
