@@ -15,13 +15,17 @@ app.get("/:slug", async (c) => {
 
   try {
     const response = await dbOperations.queryShortcut(slug);
-    return c.json(response as QuerySourceURLResponse);
+    return c.json(response as QuerySourceURLResponse, 200);
   } catch (error: unknown) {
-    console.error("GET /:slug failed:", error instanceof Error ? error.message : error, {
-      cause: error,
-    });
+    console.error(
+      "GET /:slug failed:",
+      error instanceof Error ? error.message : error,
+      {
+        cause: error,
+      },
+    );
     if (error instanceof NotFoundError) {
-      return c.notFound();
+      return c.text("Not Found", 404);
     } else if (error instanceof InternalServerError) {
       return c.text("Internal Server Error", 500);
     } else {
@@ -45,11 +49,13 @@ app.put(
 
     try {
       const response = await dbOperations.createShortcut(validatedBody);
-      return c.json(response as Shortcut);
+      return c.json(response as Shortcut, 201);
     } catch (error: unknown) {
-      console.error("PUT /shortcut failed:", error instanceof Error ? error.message : error, {
-        cause: error,
-      });
+      console.error(
+        "PUT /shortcut failed:",
+        error instanceof Error ? error.message : error,
+        { cause: error },
+      );
       if (error instanceof ConflictError) {
         return c.text("Conflict", 409);
       } else if (error instanceof InternalServerError) {
